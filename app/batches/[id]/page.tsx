@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit2 } from "lucide-react";
 import { format } from "date-fns";
-import { id } from "date-fns/locale/id";
+import { id as idLocale } from "date-fns/locale";
 import { formatNumber } from "@/lib/utils/calculations";
 import { DailyRecordsTab } from "./daily-records-tab";
 import { WeightTab } from "./weight-tab";
@@ -154,7 +154,7 @@ export default async function BatchDetailPage({ params }: BatchDetailPageProps) 
             <p className="text-sm text-muted-foreground">Tanggal Mulai</p>
             <p className="font-medium">
               {format(new Date(batch.startDate), "dd MMMM yyyy", {
-                locale: id,
+                locale: idLocale,
               })}
             </p>
           </div>
