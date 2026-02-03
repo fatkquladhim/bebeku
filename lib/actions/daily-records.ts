@@ -165,9 +165,6 @@ export async function getTodayMortality() {
       gte(dailyRecords.recordDate, today),
       lte(dailyRecords.recordDate, tomorrow)
     ),
-    with: {
-      batch: true,
-    },
   });
 
   const totalMortality = records.reduce(

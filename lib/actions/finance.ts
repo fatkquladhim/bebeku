@@ -12,9 +12,6 @@ import { v4 as uuidv4 } from "uuid";
 export async function getFinanceRecords() {
   return await db.query.financeRecords.findMany({
     orderBy: desc(financeRecords.transactionDate),
-    with: {
-      batch: true,
-    },
   });
 }
 
@@ -30,9 +27,6 @@ export async function getFinanceRecordsByBatch(batchId: string) {
 export async function getFinanceRecordById(id: string) {
   return await db.query.financeRecords.findFirst({
     where: eq(financeRecords.id, id),
-    with: {
-      batch: true,
-    },
   });
 }
 
@@ -75,11 +69,7 @@ export async function getFinanceSummary(
   endDate?: Date,
   batchId?: string
 ) {
-  let records = await db.query.financeRecords.findMany({
-    with: {
-      batch: true,
-    },
-  });
+  let records = await db.query.financeRecords.findMany();
 
   // Filter by date range if provided
   if (startDate && endDate) {

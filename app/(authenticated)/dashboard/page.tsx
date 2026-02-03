@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Metadata } from "next";
 import { StatsCard } from "@/components/stats-card";
 import { Alerts } from "@/components/alerts";
 import {
@@ -16,6 +17,11 @@ import {
 } from "@/components/ui/card";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Ringkasan kondisi peternakan bebek hari ini - statistik populasi, mortalitas, produksi telur, dan profit",
+};
 
 async function DashboardStats() {
   const stats = await getDashboardStats();

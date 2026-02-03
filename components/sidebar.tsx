@@ -19,7 +19,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Batch", href: "/batches", icon: Boxes },
   { name: "Kandang", href: "/barns", icon: Warehouse },
   { name: "Pakan", href: "/feed", icon: Wheat },
@@ -34,7 +34,7 @@ function SidebarContent() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center px-6 border-b">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-lg">
               B

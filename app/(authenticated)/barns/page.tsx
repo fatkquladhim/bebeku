@@ -3,6 +3,9 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { getBarns, createBarn, deleteBarn } from "@/lib/actions/barns";
+
+// Note: Client components cannot export metadata directly
+// Metadata is handled by the parent layout or a server component wrapper
 import { Button } from "@/components/ui/button";
 import {
   Card,

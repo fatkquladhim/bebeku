@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import {
   batches,
+  barns,
   dailyRecords,
   weightRecords,
   financeRecords,
@@ -37,12 +38,16 @@ export async function getActiveBatches(): Promise<Batch[]> {
 export async function getBatchById(id: string) {
   const batch = await db.query.batches.findFirst({
     where: eq(batches.id, id),
-    with: {
-      barn: true,
-    },
   });
 
   if (!batch) return null;
+
+  // Get barn separately
+  const barn = batch.barnId
+    ? await db.query.barns.findFirst({
+        where: eq(barns.id, batch.barnId),
+      })
+    : null;
 
   // Get daily records
   const dailyRecs = await db.query.dailyRecords.findMany({
@@ -97,6 +102,7 @@ export async function getBatchById(id: string) {
 
   return {
     ...batch,
+    barn,
     dailyRecords: dailyRecs,
     weightRecords: weightRecs,
     financeRecords: financeRecs,

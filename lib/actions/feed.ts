@@ -29,9 +29,6 @@ export async function getFeedById(id: string) {
   const movements = await db.query.feedStockMovements.findMany({
     where: eq(feedStockMovements.feedId, id),
     orderBy: desc(feedStockMovements.date),
-    with: {
-      batch: true,
-    },
   });
 
   return {
@@ -119,10 +116,10 @@ export async function getFeedConsumptionSummary() {
   const feeds = await getFeedInventory();
   const movements = await db.query.feedStockMovements.findMany({
     where: eq(feedStockMovements.type, "out"),
-    with: {
-      feed: true,
-    },
   });
+
+  // Create feed lookup map
+  const feedMap = new Map(feeds.map(f => [f.id, f]));
 
   const totalConsumption = movements.reduce(
     (sum, m) => sum + m.quantityKg,
@@ -130,7 +127,8 @@ export async function getFeedConsumptionSummary() {
   );
 
   const byFeedType = movements.reduce((acc, movement) => {
-    const feedName = movement.feed?.name || "Unknown";
+    const feed = feedMap.get(movement.feedId);
+    const feedName = feed?.name || "Unknown";
     if (!acc[feedName]) {
       acc[feedName] = 0;
     }

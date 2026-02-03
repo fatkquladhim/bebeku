@@ -12,9 +12,6 @@ import { v4 as uuidv4 } from "uuid";
 export async function getEggRecords() {
   return await db.query.eggRecords.findMany({
     orderBy: desc(eggRecords.recordDate),
-    with: {
-      batch: true,
-    },
   });
 }
 
@@ -30,9 +27,6 @@ export async function getEggRecordsByBatch(batchId: string) {
 export async function getEggRecordById(id: string) {
   return await db.query.eggRecords.findFirst({
     where: eq(eggRecords.id, id),
-    with: {
-      batch: true,
-    },
   });
 }
 
@@ -75,11 +69,7 @@ export async function getEggProductionSummary(
   startDate?: Date,
   endDate?: Date
 ) {
-  let records = await db.query.eggRecords.findMany({
-    with: {
-      batch: true,
-    },
-  });
+  let records = await db.query.eggRecords.findMany();
 
   if (batchId) {
     records = records.filter((r) => r.batchId === batchId);
@@ -143,9 +133,6 @@ export async function getTodayEggProduction() {
       gte(eggRecords.recordDate, today),
       lte(eggRecords.recordDate, tomorrow)
     ),
-    with: {
-      batch: true,
-    },
   });
 
   const totalEggs = records.reduce((sum, r) => sum + r.totalEggs, 0);

@@ -15,9 +15,6 @@ export async function getDashboardStats() {
   // Active batches
   const activeBatches = await db.query.batches.findMany({
     where: eq(batches.status, "active"),
-    with: {
-      barn: true,
-    },
   });
 
   const totalActivePopulation = activeBatches.reduce(
@@ -99,50 +96,67 @@ export async function getRecentActivities(limit: number = 10) {
   const dailyRecs = await db.query.dailyRecords.findMany({
     orderBy: (dailyRecords, { desc }) => [desc(dailyRecords.createdAt)],
     limit,
-    with: {
-      batch: true,
-    },
   });
 
   const weightRecs = await db.query.weightRecords.findMany({
     orderBy: (weightRecords, { desc }) => [desc(weightRecords.createdAt)],
     limit,
-    with: {
-      batch: true,
-    },
   });
 
   const financeRecs = await db.query.financeRecords.findMany({
     orderBy: (financeRecords, { desc }) => [desc(financeRecords.createdAt)],
     limit,
-    with: {
-      batch: true,
-    },
   });
+
+  // Fetch batch info for all records
+  const batchIds = [...new Set([
+    ...dailyRecs.map(r => r.batchId),
+    ...weightRecs.map(r => r.batchId),
+    ...financeRecs.map(r => r.batchId).filter(Boolean),
+  ])];
+  
+  const batchMap = new Map();
+  for (const batchId of batchIds) {
+    const batch = await db.query.batches.findFirst({
+      where: eq(batches.id, batchId),
+    });
+    if (batch) {
+      batchMap.set(batchId, batch);
+    }
+  }
 
   // Combine and sort
   const activities = [
-    ...dailyRecs.map((r) => ({
-      id: r.id,
-      type: "daily_record" as const,
-      description: `Pencatatan harian: ${r.mortalityCount} mortalitas, ${r.feedMorningKg + r.feedEveningKg}kg pakan`,
-      batchName: r.batch?.name || r.batch?.code || "Unknown",
-      date: r.createdAt,
-    })),
-    ...weightRecs.map((r) => ({
-      id: r.id,
-      type: "weight_record" as const,
-      description: `Timbang: ${r.averageWeightGr}g (${r.sampleSize} ekor)`,
-      batchName: r.batch?.name || r.batch?.code || "Unknown",
-      date: r.createdAt,
-    })),
-    ...financeRecs.map((r) => ({
-      id: r.id,
-      type: "finance" as const,
-      description: `${r.type === "income" ? "Pemasukan" : "Pengeluaran"}: ${r.category} - Rp ${r.amount.toLocaleString()}`,
-      batchName: r.batch?.name || r.batch?.code || "Umum",
-      date: r.createdAt,
-    })),
+    ...dailyRecs.map((r) => {
+      const batch = batchMap.get(r.batchId);
+      return {
+        id: r.id,
+        type: "daily_record" as const,
+        description: `Pencatatan harian: ${r.mortalityCount} mortalitas, ${r.feedMorningKg + r.feedEveningKg}kg pakan`,
+        batchName: batch?.name || batch?.code || "Unknown",
+        date: r.createdAt,
+      };
+    }),
+    ...weightRecs.map((r) => {
+      const batch = batchMap.get(r.batchId);
+      return {
+        id: r.id,
+        type: "weight_record" as const,
+        description: `Timbang: ${r.averageWeightGr}g (${r.sampleSize} ekor)`,
+        batchName: batch?.name || batch?.code || "Unknown",
+        date: r.createdAt,
+      };
+    }),
+    ...financeRecs.map((r) => {
+      const batch = r.batchId ? batchMap.get(r.batchId) : null;
+      return {
+        id: r.id,
+        type: "finance" as const,
+        description: `${r.type === "income" ? "Pemasukan" : "Pengeluaran"}: ${r.category} - Rp ${r.amount.toLocaleString()}`,
+        batchName: batch?.name || batch?.code || "Umum",
+        date: r.createdAt,
+      };
+    }),
   ];
 
   return activities

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Metadata } from "next";
 import { getBatches } from "@/lib/actions/batches";
 import { getActiveBarns } from "@/lib/actions/barns";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,11 @@ import { Plus, Eye, Edit2 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { calculateBirdAge, calculateMortalityRate } from "@/lib/utils/calculations";
+
+export const metadata: Metadata = {
+  title: "Manajemen Batch",
+  description: "Kelola batch bebek - tracking populasi, mortalitas, dan performa batch peternakan",
+};
 
 export default async function BatchesPage() {
   const batches = await getBatches();

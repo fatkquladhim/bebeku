@@ -1,8 +1,8 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, real, timestamp } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
 
 // Barns/Kandang table
-export const barns = sqliteTable("barns", {
+export const barns = pgTable("barns", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   code: text("code").notNull().unique(),
@@ -10,100 +10,100 @@ export const barns = sqliteTable("barns", {
   location: text("location"),
   description: text("description"),
   status: text("status").notNull().default("active"), // active, inactive, maintenance
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // Batches table
-export const batches = sqliteTable("batches", {
+export const batches = pgTable("batches", {
   id: text("id").primaryKey(),
   code: text("code").notNull().unique(), // B-YYYY-NNN format
   name: text("name"),
-  startDate: integer("start_date", { mode: "timestamp" }).notNull(),
+  startDate: timestamp("start_date", { withTimezone: true }).notNull(),
   initialPopulation: integer("initial_population").notNull(),
   currentPopulation: integer("current_population").notNull(),
   targetHarvestAge: integer("target_harvest_age").notNull().default(45),
   barnId: text("barn_id"),
   status: text("status").notNull().default("active"), // active, completed, cancelled
-  harvestDate: integer("harvest_date", { mode: "timestamp" }),
+  harvestDate: timestamp("harvest_date", { withTimezone: true }),
   harvestWeightTotal: real("harvest_weight_total"),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // Daily records (mortalitas, pakan)
-export const dailyRecords = sqliteTable("daily_records", {
+export const dailyRecords = pgTable("daily_records", {
   id: text("id").primaryKey(),
   batchId: text("batch_id").notNull(),
-  recordDate: integer("record_date", { mode: "timestamp" }).notNull(),
+  recordDate: timestamp("record_date", { withTimezone: true }).notNull(),
   mortalityCount: integer("mortality_count").notNull().default(0),
   mortalityCause: text("mortality_cause"),
   feedMorningKg: real("feed_morning_kg").notNull().default(0),
   feedEveningKg: real("feed_evening_kg").notNull().default(0),
   feedType: text("feed_type").default("Starter 21%"),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // Weight records (sampling berat badan)
-export const weightRecords = sqliteTable("weight_records", {
+export const weightRecords = pgTable("weight_records", {
   id: text("id").primaryKey(),
   batchId: text("batch_id").notNull(),
-  recordDate: integer("record_date", { mode: "timestamp" }).notNull(),
+  recordDate: timestamp("record_date", { withTimezone: true }).notNull(),
   averageWeightGr: real("average_weight_gr").notNull(), // in grams
   sampleSize: integer("sample_size").notNull().default(10),
   birdAgeDays: integer("bird_age_days").notNull(),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // Egg production records
-export const eggRecords = sqliteTable("egg_records", {
+export const eggRecords = pgTable("egg_records", {
   id: text("id").primaryKey(),
   batchId: text("batch_id").notNull(),
-  recordDate: integer("record_date", { mode: "timestamp" }).notNull(),
+  recordDate: timestamp("record_date", { withTimezone: true }).notNull(),
   totalEggs: integer("total_eggs").notNull().default(0),
   goodEggs: integer("good_eggs").notNull().default(0),
   damagedEggs: integer("damaged_eggs").notNull().default(0),
   smallEggs: integer("small_eggs").notNull().default(0),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // Finance records
-export const financeRecords = sqliteTable("finance_records", {
+export const financeRecords = pgTable("finance_records", {
   id: text("id").primaryKey(),
   batchId: text("batch_id"),
-  transactionDate: integer("transaction_date", { mode: "timestamp" }).notNull(),
+  transactionDate: timestamp("transaction_date", { withTimezone: true }).notNull(),
   type: text("type").notNull(), // income, expense
   category: text("category").notNull(), // pakan, obat, doc, tenaga_kerja, penjualan_bebek, etc
   amount: real("amount").notNull(),
   description: text("description"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // Feed inventory
-export const feedInventory = sqliteTable("feed_inventory", {
+export const feedInventory = pgTable("feed_inventory", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(), // starter, grower, finisher
@@ -113,26 +113,26 @@ export const feedInventory = sqliteTable("feed_inventory", {
   unitPrice: real("unit_price"), // per kg
   supplier: text("supplier"),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // Feed stock movements
-export const feedStockMovements = sqliteTable("feed_stock_movements", {
+export const feedStockMovements = pgTable("feed_stock_movements", {
   id: text("id").primaryKey(),
   feedId: text("feed_id").notNull(),
   type: text("type").notNull(), // in (purchase), out (consumption)
   quantityKg: real("quantity_kg").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  date: timestamp("date", { withTimezone: true }).notNull(),
   batchId: text("batch_id"),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .default(sql`(unixepoch())`),
+    .defaultNow(),
 });
 
 // ============================================
@@ -198,30 +198,20 @@ export const feedStockMovementsRelations = relations(feedStockMovements, ({ one 
   }),
 }));
 
-// ============================================
-// TYPES - TypeScript type definitions
-// ============================================
-
+// Types
 export type Barn = typeof barns.$inferSelect;
 export type NewBarn = typeof barns.$inferInsert;
-
 export type Batch = typeof batches.$inferSelect;
 export type NewBatch = typeof batches.$inferInsert;
-
 export type DailyRecord = typeof dailyRecords.$inferSelect;
 export type NewDailyRecord = typeof dailyRecords.$inferInsert;
-
 export type WeightRecord = typeof weightRecords.$inferSelect;
 export type NewWeightRecord = typeof weightRecords.$inferInsert;
-
 export type EggRecord = typeof eggRecords.$inferSelect;
 export type NewEggRecord = typeof eggRecords.$inferInsert;
-
 export type FinanceRecord = typeof financeRecords.$inferSelect;
 export type NewFinanceRecord = typeof financeRecords.$inferInsert;
-
 export type FeedInventory = typeof feedInventory.$inferSelect;
 export type NewFeedInventory = typeof feedInventory.$inferInsert;
-
 export type FeedStockMovement = typeof feedStockMovements.$inferSelect;
 export type NewFeedStockMovement = typeof feedStockMovements.$inferInsert;

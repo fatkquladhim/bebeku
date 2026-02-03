@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Metadata } from "next";
 import { getBatchById } from "@/lib/actions/batches";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,22 @@ interface BatchDetailPageProps {
   params: Promise<{
     id: string;
   }>;
+}
+
+export async function generateMetadata({ params }: BatchDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const batch = await getBatchById(id);
+
+  if (!batch) {
+    return {
+      title: "Batch Tidak Ditemukan",
+    };
+  }
+
+  return {
+    title: `Detail Batch ${batch.code}`,
+    description: `Detail dan monitoring batch ${batch.code} - ${batch.name}`,
+  };
 }
 
 export default async function BatchDetailPage({ params }: BatchDetailPageProps) {
@@ -63,7 +80,7 @@ export default async function BatchDetailPage({ params }: BatchDetailPageProps) 
               {getStatusBadge(batch.status)}
             </div>
             <p className="text-muted-foreground">
-              {batch.name || "Batch Bebek"}
+              {batch.name || "Batch Bebek"} - {batch.code || "Bebek"}
             </p>
           </div>
         </div>
