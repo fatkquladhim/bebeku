@@ -10,8 +10,8 @@ const JWT_SECRET = new TextEncoder().encode(
 // Hardcoded credentials untuk demo
 // Di production, gunakan database dengan password hashed
 const VALID_CREDENTIALS = {
-  username: "peternak",
-  password: "bebeksejahtera2024",
+  username: "adminbebeku",
+  password: "juraganbebek",
 };
 
 export async function POST(request: NextRequest) {

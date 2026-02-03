@@ -109,11 +109,14 @@ export async function getRecentActivities(limit: number = 10) {
   });
 
   // Fetch batch info for all records
-  const batchIds = [...new Set([
-    ...dailyRecs.map(r => r.batchId),
-    ...weightRecs.map(r => r.batchId),
-    ...financeRecs.map(r => r.batchId).filter(Boolean),
-  ])];
+    const batchIds = [
+    ...new Set([
+      ...dailyRecs.map(r => r.batchId),
+      ...weightRecs.map(r => r.batchId),
+      ...financeRecs.map(r => r.batchId),
+    ])
+  ].filter((id): id is string => id !== null);
+
   
   const batchMap = new Map();
   for (const batchId of batchIds) {

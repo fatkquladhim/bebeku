@@ -12,6 +12,9 @@ import { v4 as uuidv4 } from "uuid";
 export async function getFinanceRecords() {
   return await db.query.financeRecords.findMany({
     orderBy: desc(financeRecords.transactionDate),
+    with: {
+      batch: true,
+    },
   });
 }
 

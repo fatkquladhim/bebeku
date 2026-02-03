@@ -12,6 +12,9 @@ import { v4 as uuidv4 } from "uuid";
 export async function getEggRecords() {
   return await db.query.eggRecords.findMany({
     orderBy: desc(eggRecords.recordDate),
+    with: {
+      batch: true,
+    },
   });
 }
 
