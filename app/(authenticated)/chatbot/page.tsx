@@ -275,21 +275,56 @@ ${interpretation} Batas aman: ≤ 5%
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI processing
-    setTimeout(() => {
-      const response = calculateProfitAnalysis(userMessage.content);
+    // First, try local calculation functions
+    const localResponse = calculateProfitAnalysis(userMessage.content);
 
-      if (response) {
-        setMessages((prev) => [...prev, response]);
-      } else {
+    if (localResponse) {
+      // Use local calculation response
+      setMessages((prev) => [...prev, localResponse]);
+      setIsLoading(false);
+    } else {
+      // Fall back to OpenRouter AI for other queries
+      try {
+        // Get conversation history for context
+        const conversationHistory = messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
+
+        const response = await fetch("/api/chatbot", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [...conversationHistory, { role: "user", content: userMessage.content }],
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to get AI response");
+        }
+
+        const data = await response.json();
+
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.content || "Maaf, terjadi kesalahan saat memproses permintaan Anda.",
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, aiMessage]);
+      } catch (error) {
+        console.error("Error calling AI:", error);
         setMessages((prev) => [
           ...prev,
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: `🤔 **Maaf, saya belum mengerti**
+            content: `🤔 **Maaf, terjadi kesalahan**
 
-Coba ketik dengan format berikut:
+Saya tidak dapat memproses permintaan Anda saat ini. Silakan coba lagi nanti atau gunakan fitur perhitungan yang tersedia:
 
 • "Hitung laba modal 50 juta 1000 ekor"
 • "Estimasi FCR 1000 ekor"
@@ -300,10 +335,10 @@ Atau pilih tombol cepat di bawah 👇`,
             timestamp: new Date(),
           },
         ]);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
-    }, 1000);
+    }
   }
 
   const handleSuggestionClick = (query: string) => {

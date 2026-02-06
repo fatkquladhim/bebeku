@@ -112,7 +112,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-gradient-to-r from-gray-800 to-gray-900 text-white">
+      <header className="bg-linear-to-r from-gray-800 to-gray-900 text-white">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div 
@@ -141,7 +141,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-gray-50 to-gray-100 py-16 md:py-24">
+      <section className="bg-linear-to-br from-gray-50 to-gray-100 py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
