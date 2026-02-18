@@ -302,46 +302,44 @@ export default function ChatbotPage() {
                             </div>
                           );
 
-                        default: {
-                          // Handle tool invocations
-                          const partAny = part as Record<string, unknown>;
-                          if (typeof partAny.type === "string" && partAny.type.startsWith("tool-")) {
-                            const toolName = partAny.type.replace("tool-", "");
-                            const meta = toolMeta[toolName];
-                            const state = partAny.state as string;
+                        case "tool-invocation": {
+                          const toolName = part.toolInvocation.toolName;
+                          const meta = toolMeta[toolName];
+                          const state = part.toolInvocation.state;
 
-                            if (!meta) return null;
+                          if (!meta) return null;
 
-                            const isRunning = state === "input-streaming" || state === "input-available";
-                            const isDone = state === "output-available";
-                            const isError = state === "output-error";
+                          const isRunning = state === "call" || state === "partial-call";
+                          const isDone = state === "result";
+                          const isError = false;
 
-                            const ToolIcon = meta.icon;
-                            
-                            return (
-                              <div
-                                key={partIndex}
-                                className={cn(
-                                  "flex items-center gap-2 my-2 px-3 py-2 rounded-lg text-xs font-medium",
-                                  isRunning && "bg-blue-50 text-blue-700 border border-blue-200",
-                                  isDone && "bg-emerald-50 text-emerald-700 border border-emerald-200",
-                                  isError && "bg-red-50 text-red-700 border border-red-200"
-                                )}
-                              >
-                                {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                                {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
-                                {isError && <XCircle className="h-3.5 w-3.5" />}
-                                <ToolIcon className="h-3.5 w-3.5" />
-                                <span>
-                                  {isRunning && meta.label + "..."}
-                                  {isDone && meta.label + " - selesai"}
-                                  {isError && meta.label + " - gagal"}
-                                </span>
-                              </div>
-                            );
-                          }
-                          return null;
+                          const ToolIcon = meta.icon;
+                          
+                          return (
+                            <div
+                              key={partIndex}
+                              className={cn(
+                                "flex items-center gap-2 my-2 px-3 py-2 rounded-lg text-xs font-medium",
+                                isRunning && "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+                                isDone && "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
+                                isError && "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
+                              )}
+                            >
+                              {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                              {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
+                              {isError && <XCircle className="h-3.5 w-3.5" />}
+                              <ToolIcon className="h-3.5 w-3.5" />
+                              <span>
+                                {isRunning && meta.label + "..."}
+                                {isDone && meta.label + " - selesai"}
+                                {isError && meta.label + " - gagal"}
+                              </span>
+                            </div>
+                          );
                         }
+
+                        default:
+                          return null;
                       }
                     })}
                   </div>
