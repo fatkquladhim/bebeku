@@ -1,83 +1,86 @@
-import { NextRequest, NextResponse } from "next/server";
-import { OpenRouter } from "@openrouter/sdk";
+import {
+  streamText,
+  convertToModelMessages,
+  UIMessage,
+  stepCountIs,
+} from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { bebekuTools } from "@/lib/ai/tools";
 
-// Initialize OpenRouter client
-const openRouter = new OpenRouter({
+export const maxDuration = 60;
+
+// Create OpenRouter-compatible provider using @ai-sdk/openai
+const openrouter = createOpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPENROUTER_API_KEY || "",
-  httpReferer: process.env.OPENROUTER_SITE_URL || "https://bebeku.com",
-  xTitle: process.env.OPENROUTER_SITE_NAME || "BEBEKU",
+  headers: {
+    "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "https://bebeku.com",
+    "X-Title": process.env.OPENROUTER_SITE_NAME || "BEBEKU",
+  },
 });
 
-// System prompt for the farming assistant
-const SYSTEM_PROMPT = `You are BEBEKU Assistant, a helpful AI assistant for duck farmers (peternak bebek) in Indonesia. 
+const SYSTEM_PROMPT = `Kamu adalah BEBEKU Assistant, asisten AI cerdas untuk peternakan bebek BEBEKU di Indonesia.
 
-Your role is to help farmers with:
-- Farming calculations (profit, FCR, feed costs, mortality rates)
-- Best practices for duck farming
-- Disease prevention and management
-- Feed and nutrition advice
-- General farming questions
+## Kemampuan Utama
+Kamu memiliki AKSES PENUH ke database peternakan melalui tools yang tersedia. Kamu bisa:
+1. **Membaca data** - Dashboard, batch, kandang, pakan, telur, keuangan, peringatan
+2. **Menginput data** - Mencatat telur, mortalitas, pakan, keuangan, membuat batch/kandang baru
+3. **Menganalisis data** - Memberikan analisis berdasarkan data real dari database
 
-Guidelines:
-- Respond in Indonesian language
-- Be friendly and professional
-- Provide practical, actionable advice
-- When asked for calculations, provide clear step-by-step explanations
-- If you're unsure about something, be honest and suggest consulting a veterinarian or agricultural expert
-- Keep responses concise but informative
+## Panduan Penggunaan Tools
+- Ketika user bertanya tentang kondisi peternakan, SELALU gunakan tool untuk mengambil data real
+- Ketika user ingin menginput data, gunakan tool yang sesuai
+- Jika user menyebutkan kode batch (misal B-2026-001), gunakan getBatchList dulu untuk mendapatkan ID-nya
+- Untuk input data, SELALU konfirmasi detail sebelum melakukan pencatatan jika informasi kurang lengkap
+- Jika batch/kandang belum disebutkan user, tampilkan daftar batch aktif agar user bisa memilih
 
-Remember: You're assisting Indonesian duck farmers, so use appropriate terminology and context.`;
+## Format Respons
+- Gunakan bahasa Indonesia yang ramah dan profesional
+- Gunakan markdown formatting: **bold** untuk penekanan, bullet points, dan angka yang jelas
+- Untuk data keuangan, selalu format dalam Rupiah (Rp)
+- Berikan interpretasi dan saran setelah menampilkan data
+- Jika data kosong/belum ada, beritahu user dan sarankan langkah selanjutnya
 
-interface ChatMessage {
-  role: "user" | "assistant" | "system";
-  content: string;
-}
+## Pengetahuan Tambahan
+- FCR normal bebek: 1.6-1.9 (baik), 2.0-2.2 (perlu perhatian), >2.2 (buruk)
+- Mortalitas normal: <5% (aman), 5-7% (waspada), >7% (bahaya)
+- Umur panen bebek pedaging: 40-50 hari
+- Bobot panen ideal: 2.0-3.0 kg
 
-export async function POST(request: NextRequest) {
+Jawab secara ringkas tapi informatif. Jangan bertele-tele.`;
+
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { messages } = body;
+    const body = await req.json();
+    const messages: UIMessage[] = body.messages;
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: "Invalid request: messages array is required" },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: "Invalid request: messages array is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Prepare messages with system prompt
-    const apiMessages: ChatMessage[] = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages.map((msg: ChatMessage) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
-    ];
+    const modelId = process.env.OPENROUTER_MODEL || "tngtech/deepseek-r1t2-chimera:free";
 
-    // Call OpenRouter API
-    const completion = await openRouter.chat.send({
-      chatGenerationParams: {
-        model: process.env.OPENROUTER_MODEL || 'tngtech/deepseek-r1t2-chimera:free', // Using a cost-effective model
-        messages: apiMessages,
-        stream: false,
-      },
+    const result = streamText({
+      model: openrouter(modelId),
+      system: SYSTEM_PROMPT,
+      messages: await convertToModelMessages(messages),
+      tools: bebekuTools,
+      stopWhen: stepCountIs(8),
+      maxOutputTokens: 4096,
     });
 
-    // Extract the response
-    const responseContent = completion.choices[0]?.message?.content || "";
-
-    return NextResponse.json({
-      content: responseContent,
-      model: completion.model,
-    });
+    return result.toUIMessageStreamResponse();
   } catch (error) {
-    console.error("OpenRouter API error:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to get response from AI",
+    console.error("Chatbot API error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to process request",
         details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

@@ -4,7 +4,7 @@ import { SignJWT } from "jose";
 
 // Secret key untuk JWT - sebaiknya gunakan environment variable
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "your-secret-key-change-in-production"
+  process.env.JWT_SECRET || "bebeku-default-secret-key-2026"
 );
 
 // Hardcoded credentials untuk demo
