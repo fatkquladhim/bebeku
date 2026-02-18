@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { Button } from "@/components/ui/button";
@@ -115,7 +115,7 @@ function renderMarkdown(text: string) {
 
 // Render inline markdown (bold, italic, code)
 function renderInlineMarkdown(text: string) {
-  const parts: (string | JSX.Element)[] = [];
+  const parts: (string | React.ReactNode)[] = [];
   let remaining = text;
   let keyCounter = 0;
 
