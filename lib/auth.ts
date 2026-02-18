@@ -2,7 +2,7 @@ import { jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "cHWcw2MsCM5KG/1g+nNEc34tlt5RYNY6dMVgt3MqpSM="
+  process.env.JWT_SECRET || "bebeku-default-secret-key-2026"
 );
 
 export interface AuthUser {

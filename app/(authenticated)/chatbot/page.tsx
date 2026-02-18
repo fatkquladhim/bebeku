@@ -1,48 +1,171 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bot, Send, User, Calculator, Sparkles, TrendingUp, Wheat, AlertCircle } from "lucide-react";
-import { formatCurrency } from "@/lib/utils/calculations";
+import {
+  Bot,
+  Send,
+  User,
+  Sparkles,
+  Database,
+  PenLine,
+  BarChart3,
+  AlertTriangle,
+  Egg,
+  Wheat,
+  CircleDollarSign,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  type?: "text" | "calculation";
-  data?: {
-    revenue?: number;
-    costs?: number;
-    profit?: number;
-    fcr?: number;
-    mortalityRate?: number;
-  };
-  timestamp?: Date;
+// Helper to extract text from UIMessage parts
+function getMessageText(message: UIMessage): string {
+  if (!message.parts || !Array.isArray(message.parts)) return "";
+  return message.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
 }
 
+// Tool name to human-readable label and icon
+const toolMeta: Record<string, { label: string; icon: typeof Database; color: string }> = {
+  getDashboardSummary: { label: "Mengambil ringkasan dashboard", icon: BarChart3, color: "text-blue-600" },
+  getBatchList: { label: "Mengambil daftar batch", icon: Database, color: "text-blue-600" },
+  getBatchDetail: { label: "Mengambil detail batch", icon: Database, color: "text-blue-600" },
+  getBarnList: { label: "Mengambil daftar kandang", icon: Database, color: "text-blue-600" },
+  getFinanceSummary: { label: "Mengambil data keuangan", icon: CircleDollarSign, color: "text-emerald-600" },
+  getEggProduction: { label: "Mengambil data produksi telur", icon: Egg, color: "text-amber-600" },
+  getFeedStock: { label: "Mengambil data stok pakan", icon: Wheat, color: "text-orange-600" },
+  getAlerts: { label: "Mengecek peringatan", icon: AlertTriangle, color: "text-red-600" },
+  getRecentActivity: { label: "Mengambil aktivitas terbaru", icon: Database, color: "text-blue-600" },
+  addEggRecord: { label: "Mencatat produksi telur", icon: PenLine, color: "text-green-600" },
+  addDailyRecord: { label: "Mencatat data harian", icon: PenLine, color: "text-green-600" },
+  addFinanceRecord: { label: "Mencatat transaksi keuangan", icon: PenLine, color: "text-green-600" },
+  addFeedStock: { label: "Mencatat stok pakan", icon: PenLine, color: "text-green-600" },
+  addBatch: { label: "Membuat batch baru", icon: PenLine, color: "text-green-600" },
+  addBarn: { label: "Membuat kandang baru", icon: PenLine, color: "text-green-600" },
+  addWeightRecord: { label: "Mencatat data penimbangan", icon: PenLine, color: "text-green-600" },
+};
+
 const quickSuggestions = [
-  { label: "Hitung Laba", icon: TrendingUp, query: "Hitung laba dengan modal 50 juta" },
-  { label: "Estimasi FCR", icon: Calculator, query: "Estimasi FCR 1000 ekor" },
-  { label: "Biaya Pakan", icon: Wheat, query: "Biaya pakan per kg" },
-  { label: "Hitung Mortalitas", icon: AlertCircle, query: "Hitung mortalitas 1000 ekor, 30 mati" },
+  { label: "Kondisi Peternakan", icon: BarChart3, query: "Bagaimana kondisi peternakan hari ini?" },
+  { label: "Peringatan", icon: AlertTriangle, query: "Ada peringatan apa hari ini?" },
+  { label: "Produksi Telur", icon: Egg, query: "Berapa produksi telur hari ini?" },
+  { label: "Stok Pakan", icon: Wheat, query: "Bagaimana stok pakan saat ini?" },
+  { label: "Keuangan", icon: CircleDollarSign, query: "Ringkasan keuangan bulan ini" },
+  { label: "Batch Aktif", icon: Database, query: "Tampilkan semua batch yang sedang aktif" },
 ];
 
+// Simple markdown renderer
+function renderMarkdown(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, index) => {
+    // Headers
+    if (line.startsWith("### ")) {
+      return (
+        <h3 key={index} className="font-bold text-foreground mt-3 mb-1.5 text-base">
+          {renderInlineMarkdown(line.substring(4))}
+        </h3>
+      );
+    }
+    if (line.startsWith("## ")) {
+      return (
+        <h2 key={index} className="font-bold text-foreground mt-3 mb-1.5 text-lg">
+          {renderInlineMarkdown(line.substring(3))}
+        </h2>
+      );
+    }
+    // Numbered lists
+    const numberedMatch = line.match(/^(\d+)\.\s(.+)/);
+    if (numberedMatch) {
+      return (
+        <div key={index} className="flex items-start gap-2 mb-1 leading-relaxed">
+          <span className="text-muted-foreground font-medium min-w-[1.25rem]">{numberedMatch[1]}.</span>
+          <span className="flex-1">{renderInlineMarkdown(numberedMatch[2])}</span>
+        </div>
+      );
+    }
+    // Bullet points
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      return (
+        <div key={index} className="flex items-start gap-2 mb-1 leading-relaxed">
+          <span className="text-muted-foreground mt-2 w-1 h-1 rounded-full bg-muted-foreground flex-none" />
+          <span className="flex-1">{renderInlineMarkdown(line.substring(2))}</span>
+        </div>
+      );
+    }
+    // Empty line
+    if (line.trim() === "") {
+      return <div key={index} className="h-1.5" />;
+    }
+    // Regular paragraph
+    return (
+      <p key={index} className="mb-1.5 leading-relaxed">
+        {renderInlineMarkdown(line)}
+      </p>
+    );
+  });
+}
+
+// Render inline markdown (bold, italic, code)
+function renderInlineMarkdown(text: string) {
+  const parts: (string | React.ReactNode)[] = [];
+  let remaining = text;
+  let keyCounter = 0;
+
+  while (remaining.length > 0) {
+    // Bold
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+    if (boldMatch && boldMatch.index !== undefined) {
+      if (boldMatch.index > 0) {
+        parts.push(remaining.substring(0, boldMatch.index));
+      }
+      parts.push(
+        <strong key={keyCounter++} className="font-semibold text-foreground">
+          {boldMatch[1]}
+        </strong>
+      );
+      remaining = remaining.substring(boldMatch.index + boldMatch[0].length);
+      continue;
+    }
+    // Inline code
+    const codeMatch = remaining.match(/`(.+?)`/);
+    if (codeMatch && codeMatch.index !== undefined) {
+      if (codeMatch.index > 0) {
+        parts.push(remaining.substring(0, codeMatch.index));
+      }
+      parts.push(
+        <code key={keyCounter++} className="px-1.5 py-0.5 rounded bg-muted text-sm font-mono">
+          {codeMatch[1]}
+        </code>
+      );
+      remaining = remaining.substring(codeMatch.index + codeMatch[0].length);
+      continue;
+    }
+    // No more matches
+    parts.push(remaining);
+    break;
+  }
+
+  return <>{parts}</>;
+}
+
 export default function ChatbotPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "🐤 Halo, Peternak!\n\nSaya siap bantu hitung-hitungan peternakan Anda.",
-      timestamp: new Date(),
-    },
-  ]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { messages, sendMessage, status } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chatbot" }),
+  });
+
+  const isLoading = status === "streaming" || status === "submitted";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,342 +173,34 @@ export default function ChatbotPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, status]);
 
-  // Auto-focus input on desktop
   useEffect(() => {
     if (window.innerWidth >= 1024) {
       inputRef.current?.focus();
     }
   }, []);
 
-  // Helper functions for interpretations
-  function getFCRStatus(fcr: number): { status: string; emoji: string } {
-    if (fcr < 1.6) return { status: "Sangat Baik", emoji: "✅" };
-    if (fcr <= 1.9) return { status: "Normal", emoji: "✅" };
-    if (fcr <= 2.2) return { status: "Perlu Perhatian", emoji: "⚠️" };
-    return { status: "Buruk", emoji: "❌" };
-  }
-
-  function getMortalityStatus(rate: number): { status: string; emoji: string } {
-    if (rate <= 3) return { status: "Aman", emoji: "✅" };
-    if (rate <= 5) return { status: "Waspada", emoji: "⚠️" };
-    return { status: "Bahaya", emoji: "❌" };
-  }
-
-  function calculateProfitAnalysis(query: string): Message | null {
-    const lowerQuery = query.toLowerCase();
-
-    // Profit calculation
-    if (lowerQuery.includes("laba") || lowerQuery.includes("profit") || lowerQuery.includes("rugi")) {
-      const modalMatch = query.match(/(\d+[\.,]?\d*)\s*(juta|jt|ribu|rb|rp)?/i);
-      const modal = modalMatch
-        ? parseFloat(modalMatch[1].replace(",", ".")) *
-          (lowerQuery.includes("juta") || lowerQuery.includes("jt")
-            ? 1000000
-            : lowerQuery.includes("ribu") || lowerQuery.includes("rb")
-            ? 1000
-            : 1)
-        : 50000000;
-
-      const populationMatch = query.match(/(\d+)\s*ekor/i);
-      const population = populationMatch ? parseInt(populationMatch[1]) : 1000;
-
-      const docCost = population * 8000; // Rp 8,000 per DOC
-      const feedPerBird = 2.5 * 1.8; // 2.5 kg BW * 1.8 FCR
-      const feedCost = population * feedPerBird * 8000; // Rp 8,000/kg pakan
-      const otherCosts = modal * 0.15; // 15% for medicine, labor, etc
-
-      const totalCost = docCost + feedCost + otherCosts;
-      const harvestWeight = 2.5; // kg
-      const pricePerKg = 35000; // Rp 35,000/kg
-      const estimatedRevenue = population * harvestWeight * pricePerKg;
-      const profit = estimatedRevenue - totalCost;
-      const profitPerBird = profit / population;
-      const margin = (profit / estimatedRevenue) * 100;
-
-      const isProfit = profit >= 0;
-      const statusEmoji = isProfit ? "✅" : "❌";
-      const statusText = isProfit ? "Menguntungkan" : "Merugi";
-
-      return {
-        id: Date.now().toString(),
-        role: "assistant",
-        content: `📊 **Estimasi Laba/Rugi**
-
-Ringkasan perhitungan ${population} ekor dengan modal ${formatCurrency(modal)}.
-
-📈 **Data Utama:**
-• Populasi: ${population.toLocaleString()} ekor
-• Bobot panen: ${harvestWeight} kg/ekor
-• Harga jual: ${formatCurrency(pricePerKg)}/kg
-• Total pendapatan: ${formatCurrency(estimatedRevenue)}
-• Total biaya: ${formatCurrency(totalCost)}
-  - DOC: ${formatCurrency(docCost)}
-  - Pakan: ${formatCurrency(feedCost)}
-  - Lainnya: ${formatCurrency(otherCosts)}
-
-${statusEmoji} **Kesimpulan:** ${statusText}
-Laba bersih ${formatCurrency(profit)} (${margin.toFixed(1)}% margin).
-
-💡 **Saran:** Laba/ekor ${formatCurrency(profitPerBird)}. ${isProfit ? "Pertahankan FCR < 1.9 untuk efisiensi." : "Periksa kembali biaya pakan dan mortalitas."}`,
-        type: "calculation",
-        data: {
-          revenue: estimatedRevenue,
-          costs: totalCost,
-          profit: profit,
-        },
-        timestamp: new Date(),
-      };
-    }
-
-    // FCR calculation
-    if (lowerQuery.includes("fcr")) {
-      const populationMatch = query.match(/(\d+)\s*ekor/i);
-      const population = populationMatch ? parseInt(populationMatch[1]) : 1000;
-
-      const targetWeight = 2.5; // kg
-      const fcr = 1.8; // default estimation
-      const feedNeeded = population * targetWeight * fcr;
-      const feedPerBird = targetWeight * fcr;
-      const feedCostPerBird = feedPerBird * 8000;
-      const totalFeedCost = feedNeeded * 8000;
-
-      const fcrStatus = getFCRStatus(fcr);
-
-      return {
-        id: Date.now().toString(),
-        role: "assistant",
-        content: `📊 **Estimasi FCR & Kebutuhan Pakan**
-
-Perhitungan untuk ${population.toLocaleString()} ekor bebek pedaging.
-
-📈 **Data Utama:**
-• Target bobot: ${targetWeight} kg/ekor
-• Total bobot: ${(population * targetWeight).toLocaleString()} kg
-• FCR estimasi: ${fcr}
-• Pakan dibutuhkan: ${feedNeeded.toLocaleString()} kg
-• Biaya pakan: ${formatCurrency(totalFeedCost)}
-
-${fcrStatus.emoji} **Kesimpulan:** FCR ${fcr} = ${fcrStatus.status}
-Standar normal: 1.6 – 1.9
-
-💡 **Saran:** Biaya pakan/ekor ${formatCurrency(feedCostPerBird)}. FCR < 1.6 sangat baik, > 2.2 perlu evaluasi manajemen.`,
-        timestamp: new Date(),
-      };
-    }
-
-    // Feed cost calculation
-    if (lowerQuery.includes("biaya pakan") || lowerQuery.includes("harga pakan") || lowerQuery.includes("kebutuhan pakan")) {
-      const weightMatch = query.match(/(\d+[\.,]?\d*)\s*kg/i);
-      const weight = weightMatch ? parseFloat(weightMatch[1].replace(",", ".")) : 2.5;
-      const populationMatch = query.match(/(\d+)\s*ekor/i);
-      const population = populationMatch ? parseInt(populationMatch[1]) : 1;
-
-      const fcr = 1.8;
-      const feedPrice = 8000;
-
-      const feedPerBird = weight * fcr;
-      const totalFeedNeeded = feedPerBird * population;
-      const costPerBird = feedPerBird * feedPrice;
-      const totalCost = totalFeedNeeded * feedPrice;
-
-      const fcrStatus = getFCRStatus(fcr);
-
-      return {
-        id: Date.now().toString(),
-        role: "assistant",
-        content: `🌾 **Perhitungan Biaya Pakan**
-
-Estimasi untuk bobot ${weight} kg/ekor × ${population.toLocaleString()} ekor.
-
-📈 **Data Utama:**
-• FCR: ${fcr} (${fcrStatus.status})
-• Pakan/ekor: ${feedPerBird.toFixed(2)} kg
-• Total pakan: ${totalFeedNeeded.toFixed(2)} kg
-• Harga pakan: ${formatCurrency(feedPrice)}/kg
-• Biaya/ekor: ${formatCurrency(costPerBird)}
-• Total biaya: ${formatCurrency(totalCost)}
-
-${fcrStatus.emoji} **Kesimpulan:** FCR dalam batas ${fcrStatus.status.toLowerCase()}
-Standar: 1.6 – 1.9
-
-💡 **Saran:** Pakan = 60-70% biaya produksi. Jaga kualitas pakan & manajemen.`,
-        timestamp: new Date(),
-      };
-    }
-
-    // Mortality calculation
-    if (lowerQuery.includes("mortalitas") || lowerQuery.includes("mati") || lowerQuery.includes("kematian")) {
-      const populationMatch = query.match(/(\d+)\s*ekor/i);
-      const deadMatch = query.match(/(\d+)\s*(mati|meninggal|dead)/i);
-
-      const population = populationMatch ? parseInt(populationMatch[1]) : 1000;
-      const dead = deadMatch ? parseInt(deadMatch[1]) : 50;
-      const rate = (dead / population) * 100;
-      const remaining = population - dead;
-
-      const mortalityStatus = getMortalityStatus(rate);
-
-      let interpretation = "";
-      if (rate <= 3) interpretation = "Masih dalam batas aman (<5%).";
-      else if (rate <= 5) interpretation = "Batas waspada, perlu monitoring.";
-      else interpretation = "Di atas batas normal, segera evaluasi!";
-
-      return {
-        id: Date.now().toString(),
-        role: "assistant",
-        content: `⚠️ **Analisis Mortalitas**
-
-Perhitungan tingkat kematian peternakan Anda.
-
-📈 **Data Utama:**
-• Populasi awal: ${population.toLocaleString()} ekor
-• Kematian: ${dead} ekor
-• Sisa hidup: ${remaining.toLocaleString()} ekor
-• Tingkat mortalitas: ${rate.toFixed(2)}%
-
-${mortalityStatus.emoji} **Kesimpulan:** Status ${mortalityStatus.status}
-${interpretation} Batas aman: ≤ 5%
-
-💡 **Saran:** ${rate > 5 ? "Periksa kondisi kandang, pakan, dan vaksinasi." : "Pertahankan manajemen yang baik."}`,
-        type: "calculation",
-        data: {
-          mortalityRate: rate,
-        },
-        timestamp: new Date(),
-      };
-    }
-
-    return null;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    sendMessage({ text: input });
     setInput("");
-    setIsLoading(true);
-
-    // First, try local calculation functions
-    const localResponse = calculateProfitAnalysis(userMessage.content);
-
-    if (localResponse) {
-      // Use local calculation response
-      setMessages((prev) => [...prev, localResponse]);
-      setIsLoading(false);
-    } else {
-      // Fall back to OpenRouter AI for other queries
-      try {
-        // Get conversation history for context
-        const conversationHistory = messages.map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        }));
-
-        const response = await fetch("/api/chatbot", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            messages: [...conversationHistory, { role: "user", content: userMessage.content }],
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to get AI response");
-        }
-
-        const data = await response.json();
-
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: data.content || "Maaf, terjadi kesalahan saat memproses permintaan Anda.",
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, aiMessage]);
-      } catch (error) {
-        console.error("Error calling AI:", error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: `🤔 **Maaf, terjadi kesalahan**
-
-Saya tidak dapat memproses permintaan Anda saat ini. Silakan coba lagi nanti atau gunakan fitur perhitungan yang tersedia:
-
-• "Hitung laba modal 50 juta 1000 ekor"
-• "Estimasi FCR 1000 ekor"
-• "Biaya pakan 2.5 kg 1000 ekor"
-• "Hitung mortalitas 1000 ekor 30 mati"
-
-Atau pilih tombol cepat di bawah 👇`,
-            timestamp: new Date(),
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
   }
 
-  const handleSuggestionClick = (query: string) => {
-    setInput(query);
-    inputRef.current?.focus();
-  };
+  function handleSuggestionClick(query: string) {
+    if (isLoading) return;
+    sendMessage({ text: query });
+  }
 
   const formatTime = (date: Date) => {
     return new Intl.DateTimeFormat("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
-    }).format(date);
+    }).format(new Date(date));
   };
 
-  // Parse markdown-like content
-  const renderContent = (content: string) => {
-    const lines = content.split("\n");
-    return lines.map((line, index) => {
-      // Bold text **text**
-      if (line.startsWith("**") && line.endsWith("**")) {
-        return (
-          <p key={index} className="font-semibold text-foreground mb-2 leading-relaxed">
-            {line.replace(/\*\*/g, "")}
-          </p>
-        );
-      }
-      // Bullet points
-      if (line.startsWith("• ")) {
-        return (
-          <div key={index} className="flex items-start gap-2 mb-1.5 leading-relaxed">
-            <span className="text-muted-foreground mt-1.5">•</span>
-            <span className="flex-1">{line.substring(2)}</span>
-          </div>
-        );
-      }
-      // Empty line
-      if (line.trim() === "") {
-        return <div key={index} className="h-2" />;
-      }
-      // Regular text
-      return (
-        <p key={index} className="mb-2 leading-relaxed">
-          {line}
-        </p>
-      );
-    });
-  };
+  const hasMessages = messages.length > 0;
 
   return (
     <div className="fixed inset-0 lg:left-64 bg-background flex flex-col">
@@ -397,7 +212,9 @@ Atau pilih tombol cepat di bawah 👇`,
           </div>
           <div>
             <h1 className="text-lg font-semibold text-foreground tracking-tight">BEBEKU Assistant</h1>
-            <p className="text-sm text-muted-foreground">AI-powered farming analytics</p>
+            <p className="text-sm text-muted-foreground">
+              {isLoading ? "Sedang memproses..." : "AI dengan akses penuh ke database peternakan"}
+            </p>
           </div>
         </div>
       </header>
@@ -405,14 +222,42 @@ Atau pilih tombol cepat di bawah 👇`,
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto scroll-smooth">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-          {messages.map((message, index) => (
+          {/* Welcome message if no messages */}
+          {!hasMessages && (
+            <div className="flex flex-col items-center justify-center py-12 gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-xl">
+                <Sparkles className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-center">
+                <h2 className="text-xl font-semibold text-foreground mb-2">Halo, Peternak!</h2>
+                <p className="text-muted-foreground max-w-md leading-relaxed">
+                  Saya bisa membaca dan menginput data peternakan Anda langsung melalui percakapan. 
+                  Coba tanyakan sesuatu atau pilih tombol di bawah.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-lg">
+                {quickSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.label}
+                    onClick={() => handleSuggestionClick(suggestion.query)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-card border border-border/50 hover:bg-accent text-foreground text-sm font-medium transition-colors text-left"
+                  >
+                    <suggestion.icon className="h-4 w-4 text-muted-foreground flex-none" />
+                    <span className="truncate">{suggestion.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
+          {messages.map((message) => (
             <div
               key={message.id}
               className={cn(
-                "flex gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                "flex gap-3 sm:gap-4",
                 message.role === "user" ? "flex-row-reverse" : "flex-row"
               )}
-              style={{ animationDelay: `${index * 50}ms` }}
             >
               {/* Avatar */}
               <div className="flex-none">
@@ -431,7 +276,7 @@ Atau pilih tombol cepat di bawah 👇`,
                 )}
               </div>
 
-              {/* Message Bubble */}
+              {/* Message Content */}
               <div
                 className={cn(
                   "flex-1 min-w-0",
@@ -440,100 +285,112 @@ Atau pilih tombol cepat di bawah 👇`,
               >
                 <div
                   className={cn(
-                    "relative max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-[15px] leading-relaxed",
+                    "relative max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-[15px]",
                     message.role === "user"
                       ? "bg-slate-900 text-white shadow-md"
-                      : "bg-white border border-border/50 shadow-sm text-foreground"
+                      : "bg-card border border-border/50 shadow-sm text-foreground"
                   )}
                 >
-                  {/* Content */}
+                  {/* Render parts */}
                   <div className="prose prose-sm max-w-none">
-                    {renderContent(message.content)}
-                  </div>
+                    {message.parts.map((part, partIndex) => {
+                      switch (part.type) {
+                        case "text":
+                          return (
+                            <div key={partIndex}>
+                              {renderMarkdown(part.text)}
+                            </div>
+                          );
 
-                  {/* Calculation Results Card */}
-                  {message.type === "calculation" && message.data && (
-                    <div className="mt-4 p-4 bg-background/80 backdrop-blur rounded-xl border border-border/50">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Calculator className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium text-sm text-foreground">Hasil Perhitungan</span>
-                      </div>
-                      {message.data.revenue !== undefined && (
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Estimasi Pendapatan</span>
-                            <span className="font-medium text-emerald-600">
-                              {formatCurrency(message.data.revenue)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Total Biaya</span>
-                            <span className="font-medium text-red-500">
-                              {formatCurrency(message.data.costs || 0)}
-                            </span>
-                          </div>
-                          <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                            <span className="font-medium text-foreground">Estimasi Laba</span>
-                            <span
+                        case "tool-invocation": {
+                          const toolName = part.toolInvocation.toolName;
+                          const meta = toolMeta[toolName];
+                          const state = part.toolInvocation.state;
+
+                          if (!meta) return null;
+
+                          const isRunning = state === "call" || state === "partial-call";
+                          const isDone = state === "result";
+                          const isError = false;
+
+                          const ToolIcon = meta.icon;
+                          
+                          return (
+                            <div
+                              key={partIndex}
                               className={cn(
-                                "font-bold",
-                                (message.data.profit || 0) >= 0 ? "text-emerald-600" : "text-red-500"
+                                "flex items-center gap-2 my-2 px-3 py-2 rounded-lg text-xs font-medium",
+                                isRunning && "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+                                isDone && "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
+                                isError && "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
                               )}
                             >
-                              {formatCurrency(message.data.profit || 0)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      {message.data.mortalityRate !== undefined && (
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Tingkat Mortalitas</span>
-                            <span
-                              className={cn(
-                                "font-bold",
-                                message.data.mortalityRate < 5 ? "text-emerald-600" : "text-amber-500"
-                              )}
-                            >
-                              {message.data.mortalityRate.toFixed(2)}%
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                              {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                              {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
+                              {isError && <XCircle className="h-3.5 w-3.5" />}
+                              <ToolIcon className="h-3.5 w-3.5" />
+                              <span>
+                                {isRunning && meta.label + "..."}
+                                {isDone && meta.label + " - selesai"}
+                                {isError && meta.label + " - gagal"}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        default:
+                          return null;
+                      }
+                    })}
+                  </div>
 
                   {/* Timestamp */}
-                  <div
-                    className={cn(
-                      "mt-2 text-[11px] opacity-60",
-                      message.role === "user" ? "text-right" : "text-left"
-                    )}
-                  >
-                    {message.timestamp ? formatTime(message.timestamp) : ""}
-                  </div>
+                  {message.createdAt && (
+                    <div
+                      className={cn(
+                        "mt-2 text-[11px] opacity-50",
+                        message.role === "user" ? "text-right" : "text-left"
+                      )}
+                    >
+                      {formatTime(message.createdAt)}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ))}
 
           {/* Loading Indicator */}
-          {isLoading && (
-            <div className="flex gap-3 sm:gap-4 animate-in fade-in duration-200">
-              <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-border shadow-sm">
-                <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-xs">
-                  <Bot className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="bg-white border border-border/50 rounded-2xl px-4 py-3 shadow-sm">
-                <div className="flex gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+          {isLoading && messages.length > 0 && (() => {
+            const lastMsg = messages[messages.length - 1];
+            const hasContent = lastMsg.role === "assistant" && lastMsg.parts.some(p => p.type === "text");
+            if (hasContent) return null;
+            return (
+              <div className="flex gap-3 sm:gap-4">
+                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-border shadow-sm">
+                  <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-xs">
+                    <Bot className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="bg-card border border-border/50 rounded-2xl px-4 py-3 shadow-sm">
+                  <div className="flex gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    />
+                    <span
+                      className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    />
+                    <span
+                      className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div ref={messagesEndRef} />
         </div>
@@ -541,21 +398,24 @@ Atau pilih tombol cepat di bawah 👇`,
 
       {/* Input Area */}
       <div className="flex-none border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        {/* Quick Suggestions */}
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {quickSuggestions.map((suggestion) => (
-              <button
-                key={suggestion.label}
-                onClick={() => handleSuggestionClick(suggestion.query)}
-                className="flex-none inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition-colors active:scale-95"
-              >
-                <suggestion.icon className="h-4 w-4" />
-                <span>{suggestion.label}</span>
-              </button>
-            ))}
+        {/* Quick Suggestions - only when there are messages */}
+        {hasMessages && (
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {quickSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion.label}
+                  onClick={() => handleSuggestionClick(suggestion.query)}
+                  disabled={isLoading}
+                  className="flex-none inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-secondary hover:bg-accent text-foreground text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <suggestion.icon className="h-3.5 w-3.5" />
+                  <span>{suggestion.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Input Form */}
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6">
@@ -565,21 +425,29 @@ Atau pilih tombol cepat di bawah 👇`,
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Tanyakan sesuatu tentang peternakan..."
+                placeholder={
+                  isLoading
+                    ? "Menunggu respons..."
+                    : 'Tanya atau perintah, misal: "catat 500 telur hari ini"'
+                }
                 disabled={isLoading}
-                className="min-h-[52px] pr-4 pl-4 py-3 text-[15px] rounded-2xl border-border/60 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-0 resize-none"
+                className="min-h-[52px] pr-4 pl-4 py-3 text-[15px] rounded-2xl border-border/60 bg-card shadow-sm focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-0 resize-none"
               />
             </div>
             <Button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="h-[52px] w-[52px] rounded-2xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95 transition-all"
+              className="h-[52px] w-[52px] rounded-2xl bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-md active:scale-95 transition-all"
             >
-              <Send className="h-5 w-5" />
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
             </Button>
           </form>
           <p className="text-center text-xs text-muted-foreground mt-3">
-            AI Assistant dapat membuat kesalahan. Verifikasi informasi penting.
+            AI Assistant dengan akses database penuh. Verifikasi informasi penting.
           </p>
         </div>
       </div>
