@@ -33,9 +33,7 @@ function getMessageText(message: UIMessage): string {
     .join("");
 }
 
-function isToolPart(
-  part: any
-): part is { type: string; state: string } {
+function isToolPart(part: any): part is { type: string; state: string } {
   return (
     typeof part?.type === "string" &&
     part.type.startsWith("tool-") &&
@@ -43,34 +41,112 @@ function isToolPart(
   );
 }
 
-
 // Tool name to human-readable label and icon
-const toolMeta: Record<string, { label: string; icon: typeof Database; color: string }> = {
-  getDashboardSummary: { label: "Mengambil ringkasan dashboard", icon: BarChart3, color: "text-blue-600" },
-  getBatchList: { label: "Mengambil daftar batch", icon: Database, color: "text-blue-600" },
-  getBatchDetail: { label: "Mengambil detail batch", icon: Database, color: "text-blue-600" },
-  getBarnList: { label: "Mengambil daftar kandang", icon: Database, color: "text-blue-600" },
-  getFinanceSummary: { label: "Mengambil data keuangan", icon: CircleDollarSign, color: "text-emerald-600" },
-  getEggProduction: { label: "Mengambil data produksi telur", icon: Egg, color: "text-amber-600" },
-  getFeedStock: { label: "Mengambil data stok pakan", icon: Wheat, color: "text-orange-600" },
-  getAlerts: { label: "Mengecek peringatan", icon: AlertTriangle, color: "text-red-600" },
-  getRecentActivity: { label: "Mengambil aktivitas terbaru", icon: Database, color: "text-blue-600" },
-  addEggRecord: { label: "Mencatat produksi telur", icon: PenLine, color: "text-green-600" },
-  addDailyRecord: { label: "Mencatat data harian", icon: PenLine, color: "text-green-600" },
-  addFinanceRecord: { label: "Mencatat transaksi keuangan", icon: PenLine, color: "text-green-600" },
-  addFeedStock: { label: "Mencatat stok pakan", icon: PenLine, color: "text-green-600" },
-  addBatch: { label: "Membuat batch baru", icon: PenLine, color: "text-green-600" },
-  addBarn: { label: "Membuat kandang baru", icon: PenLine, color: "text-green-600" },
-  addWeightRecord: { label: "Mencatat data penimbangan", icon: PenLine, color: "text-green-600" },
+const toolMeta: Record<
+  string,
+  { label: string; icon: typeof Database; color: string }
+> = {
+  getDashboardSummary: {
+    label: "Mengambil ringkasan dashboard",
+    icon: BarChart3,
+    color: "text-blue-600",
+  },
+  getBatchList: {
+    label: "Mengambil daftar batch",
+    icon: Database,
+    color: "text-blue-600",
+  },
+  getBatchDetail: {
+    label: "Mengambil detail batch",
+    icon: Database,
+    color: "text-blue-600",
+  },
+  getBarnList: {
+    label: "Mengambil daftar kandang",
+    icon: Database,
+    color: "text-blue-600",
+  },
+  getFinanceSummary: {
+    label: "Mengambil data keuangan",
+    icon: CircleDollarSign,
+    color: "text-emerald-600",
+  },
+  getEggProduction: {
+    label: "Mengambil data produksi telur",
+    icon: Egg,
+    color: "text-amber-600",
+  },
+  getFeedStock: {
+    label: "Mengambil data stok pakan",
+    icon: Wheat,
+    color: "text-orange-600",
+  },
+  getAlerts: {
+    label: "Mengecek peringatan",
+    icon: AlertTriangle,
+    color: "text-red-600",
+  },
+  getRecentActivity: {
+    label: "Mengambil aktivitas terbaru",
+    icon: Database,
+    color: "text-blue-600",
+  },
+  addEggRecord: {
+    label: "Mencatat produksi telur",
+    icon: PenLine,
+    color: "text-green-600",
+  },
+  addDailyRecord: {
+    label: "Mencatat data harian",
+    icon: PenLine,
+    color: "text-green-600",
+  },
+  addFinanceRecord: {
+    label: "Mencatat transaksi keuangan",
+    icon: PenLine,
+    color: "text-green-600",
+  },
+  addFeedStock: {
+    label: "Mencatat stok pakan",
+    icon: PenLine,
+    color: "text-green-600",
+  },
+  addBatch: {
+    label: "Membuat batch baru",
+    icon: PenLine,
+    color: "text-green-600",
+  },
+  addBarn: {
+    label: "Membuat kandang baru",
+    icon: PenLine,
+    color: "text-green-600",
+  },
+  addWeightRecord: {
+    label: "Mencatat data penimbangan",
+    icon: PenLine,
+    color: "text-green-600",
+  },
 };
 
 const quickSuggestions = [
-  { label: "Kondisi Peternakan", icon: BarChart3, query: "Bagaimana kondisi peternakan hari ini?" },
+  {
+    label: "Kondisi Peternakan",
+    icon: BarChart3,
+    query: "Bagaimana kondisi peternakan hari ini?",
+  },
   { label: "Peringatan", icon: AlertTriangle, query: "Ada peringatan apa hari ini?" },
-  { label: "Produksi Telur", icon: Egg, query: "Berapa produksi telur hari ini?" },
+  {
+    label: "Produksi Telur",
+    icon: Egg,
+    query: "Berapa produksi telur hari ini?",
+  },
   { label: "Stok Pakan", icon: Wheat, query: "Bagaimana stok pakan saat ini?" },
   { label: "Keuangan", icon: CircleDollarSign, query: "Ringkasan keuangan bulan ini" },
-  { label: "Batch Aktif", icon: Database, query: "Tampilkan semua batch yang sedang aktif" },
+  {
+    label: "Batch Aktif",
+    icon: Database,
+    query: "Tampilkan semua batch yang sedang aktif",
+  },
 ];
 
 // Simple markdown renderer
@@ -80,14 +156,20 @@ function renderMarkdown(text: string) {
     // Headers
     if (line.startsWith("### ")) {
       return (
-        <h3 key={index} className="font-bold text-foreground mt-3 mb-1.5 text-base">
+        <h3
+          key={index}
+          className="font-bold text-foreground mt-3 mb-1.5 text-base"
+        >
           {renderInlineMarkdown(line.substring(4))}
         </h3>
       );
     }
     if (line.startsWith("## ")) {
       return (
-        <h2 key={index} className="font-bold text-foreground mt-3 mb-1.5 text-lg">
+        <h2
+          key={index}
+          className="font-bold text-foreground mt-3 mb-1.5 text-lg"
+        >
           {renderInlineMarkdown(line.substring(3))}
         </h2>
       );
@@ -96,18 +178,30 @@ function renderMarkdown(text: string) {
     const numberedMatch = line.match(/^(\d+)\.\s(.+)/);
     if (numberedMatch) {
       return (
-        <div key={index} className="flex items-start gap-2 mb-1 leading-relaxed">
-          <span className="text-muted-foreground font-medium min-w-[1.25rem]">{numberedMatch[1]}.</span>
-          <span className="flex-1">{renderInlineMarkdown(numberedMatch[2])}</span>
+        <div
+          key={index}
+          className="flex items-start gap-2 mb-1 leading-relaxed"
+        >
+          <span className="text-muted-foreground font-medium min-w-[1.25rem]">
+            {numberedMatch[1]}.
+          </span>
+          <span className="flex-1">
+            {renderInlineMarkdown(numberedMatch[2])}
+          </span>
         </div>
       );
     }
     // Bullet points
     if (line.startsWith("- ") || line.startsWith("* ")) {
       return (
-        <div key={index} className="flex items-start gap-2 mb-1 leading-relaxed">
+        <div
+          key={index}
+          className="flex items-start gap-2 mb-1 leading-relaxed"
+        >
           <span className="text-muted-foreground mt-2 w-1 h-1 rounded-full bg-muted-foreground flex-none" />
-          <span className="flex-1">{renderInlineMarkdown(line.substring(2))}</span>
+          <span className="flex-1">
+            {renderInlineMarkdown(line.substring(2))}
+          </span>
         </div>
       );
     }
@@ -152,7 +246,10 @@ function renderInlineMarkdown(text: string) {
         parts.push(remaining.substring(0, codeMatch.index));
       }
       parts.push(
-        <code key={keyCounter++} className="px-1.5 py-0.5 rounded bg-muted text-sm font-mono">
+        <code
+          key={keyCounter++}
+          className="px-1.5 py-0.5 rounded bg-muted text-sm font-mono"
+        >
           {codeMatch[1]}
         </code>
       );
@@ -204,13 +301,6 @@ export default function ChatbotPage() {
     sendMessage({ text: query });
   }
 
-  const formatTime = (date: Date) => {
-    return new Intl.DateTimeFormat("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(date));
-  };
-
   const hasMessages = messages.length > 0;
 
   return (
@@ -222,9 +312,13 @@ export default function ChatbotPage() {
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground tracking-tight">BEBEKU Assistant</h1>
+            <h1 className="text-lg font-semibold text-foreground tracking-tight">
+              BEBEKU Assistant
+            </h1>
             <p className="text-sm text-muted-foreground">
-              {isLoading ? "Sedang memproses..." : "AI dengan akses penuh ke database peternakan"}
+              {isLoading
+                ? "Sedang memproses..."
+                : "AI dengan akses penuh ke database peternakan"}
             </p>
           </div>
         </div>
@@ -240,10 +334,13 @@ export default function ChatbotPage() {
                 <Sparkles className="h-8 w-8 text-white" />
               </div>
               <div className="text-center">
-                <h2 className="text-xl font-semibold text-foreground mb-2">Halo, Peternak!</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-2">
+                  Halo, Peternak!
+                </h2>
                 <p className="text-muted-foreground max-w-md leading-relaxed">
-                  Saya bisa membaca dan menginput data peternakan Anda langsung melalui percakapan. 
-                  Coba tanyakan sesuatu atau pilih tombol di bawah.
+                  Saya bisa membaca dan menginput data peternakan Anda langsung
+                  melalui percakapan. Coba tanyakan sesuatu atau pilih tombol di
+                  bawah.
                 </p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-lg">
@@ -261,7 +358,7 @@ export default function ChatbotPage() {
             </div>
           )}
 
-          {/* Messages */}
+          {/* Messages Loop */}
           {messages.map((message) => (
             <div
               key={message.id}
@@ -291,7 +388,9 @@ export default function ChatbotPage() {
               <div
                 className={cn(
                   "flex-1 min-w-0",
-                  message.role === "user" ? "flex justify-end" : "flex justify-start"
+                  message.role === "user"
+                    ? "flex justify-end"
+                    : "flex justify-start"
                 )}
               >
                 <div
@@ -302,72 +401,82 @@ export default function ChatbotPage() {
                       : "bg-card border border-border/50 shadow-sm text-foreground"
                   )}
                 >
-             {/* Render parts */}
-              <div className="prose prose-sm max-w-none">
-                {message.parts.map((part, partIndex) => {
-                  if (part.type === "text") {
-                    return (
-                      <div key={partIndex}>
-                        {renderMarkdown(part.text)}
-                      </div>
-                    );
-                  }
-              
-                  if (isToolPart(part)) {
-                    const toolName = part.type.replace("tool-", "");
-                    const meta = toolMeta[toolName];
-                    const state = part.state;
-              
-                    if (!meta) return null;
-              
-                    const isRunning =
-                      state === "input-streaming" ||
-                      state === "call" ||
-                      state === "partial-call";
-              
-                    const isDone =
-                      state === "output-available" ||
-                      state === "result";
-              
-                    const isError = state === "error";
-              
-                    const ToolIcon = meta.icon;
-              
-                    return (
-                      <div
-                        key={partIndex}
-                        className={cn(
-                          "flex items-center gap-2 my-2 px-3 py-2 rounded-lg text-xs font-medium",
-                          isRunning &&
-                            "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
-                          isDone &&
-                            "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
-                          isError &&
-                            "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
-                        )}
-                      >
-                        {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
-                        {isError && <XCircle className="h-3.5 w-3.5" />}
-                        <ToolIcon className="h-3.5 w-3.5" />
-                        <span>
-                          {isRunning && meta.label + "..."}
-                          {isDone && meta.label + " - selesai"}
-                          {isError && meta.label + " - gagal"}
-                        </span>
-                      </div>
-                    );
-                  }
-              
-                  return null;
-                })}
+                  <div className="prose prose-sm max-w-none">
+                    {message.parts.map((part, partIndex) => {
+                      if (part.type === "text") {
+                        return (
+                          <div key={partIndex}>
+                            {renderMarkdown(part.text)}
+                          </div>
+                        );
+                      }
+
+                      if (isToolPart(part)) {
+                        const toolName = part.type.replace("tool-", "");
+                        const meta = toolMeta[toolName];
+                        const state = part.state;
+
+                        if (!meta) return null;
+
+                        const isRunning =
+                          state === "input-streaming" ||
+                          state === "call" ||
+                          state === "partial-call";
+
+                        const isDone =
+                          state === "output-available" ||
+                          state === "result";
+
+                        const isError = state === "error";
+
+                        const ToolIcon = meta.icon;
+
+                        return (
+                          <div
+                            key={partIndex}
+                            className={cn(
+                              "flex items-center gap-2 my-2 px-3 py-2 rounded-lg text-xs font-medium",
+                              isRunning &&
+                                "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+                              isDone &&
+                                "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
+                              isError &&
+                                "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
+                            )}
+                          >
+                            {isRunning && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            )}
+                            {isDone && (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            {isError && <XCircle className="h-3.5 w-3.5" />}
+                            <ToolIcon className="h-3.5 w-3.5" />
+                            <span>
+                              {isRunning && meta.label + "..."}
+                              {isDone && meta.label + " - selesai"}
+                              {isError && meta.label + " - gagal"}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })}
+                  </div>
+                </div>
               </div>
+            </div>
+          ))}
 
           {/* Loading Indicator */}
           {isLoading && messages.length > 0 && (() => {
             const lastMsg = messages[messages.length - 1];
-            const hasContent = lastMsg.role === "assistant" && lastMsg.parts.some(p => p.type === "text");
+            const hasContent =
+              lastMsg.role === "assistant" &&
+              lastMsg.parts.some((p) => p.type === "text");
             if (hasContent) return null;
+            
             return (
               <div className="flex gap-3 sm:gap-4">
                 <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-border shadow-sm">
@@ -450,7 +559,8 @@ export default function ChatbotPage() {
             </Button>
           </form>
           <p className="text-center text-xs text-muted-foreground mt-3">
-            AI Assistant dengan akses database penuh. Verifikasi informasi penting.
+            AI Assistant dengan akses database penuh. Verifikasi informasi
+            penting.
           </p>
         </div>
       </div>
