@@ -419,15 +419,17 @@ export default function ChatbotPage() {
                         if (!meta) return null;
 
                         const isRunning =
-                          state === "input-streaming" ||
-                          state === "call" ||
-                          state === "partial-call";
+                        state === "input-available" ||
+                        state === "approval-requested";
+                      
+                      const isDone =
+                        state === "output-available" ||
+                        state === "approval-responded";
+                      
+                      const isError =
+                        state === "output-error" ||
+                        state === "output-denied";
 
-                        const isDone =
-                          state === "output-available" ||
-                          state === "result";
-
-                        const isError = state === "error";
 
                         const ToolIcon = meta.icon;
 
