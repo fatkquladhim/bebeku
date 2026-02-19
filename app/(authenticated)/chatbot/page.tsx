@@ -291,83 +291,78 @@ export default function ChatbotPage() {
                       : "bg-card border border-border/50 shadow-sm text-foreground"
                   )}
                 >
-                  {/* Render parts */}
-                  <div className="prose prose-sm max-w-none">
-                    {message.parts.map((part, partIndex) => {
-                      // TEXT
-                      if (part.type === "text") {
-                        return (
-                          <div key={partIndex}>
-                            {renderMarkdown(part.text)}
-                          </div>
-                        );
-                      }
-                  
-                      // TOOL (AI SDK v6)
-                      if (part.type.startsWith("tool-")) {
-                        const toolName = part.type.replace("tool-", "");
-                        const meta = toolMeta[toolName];
-                        const state = part.state;
-                  
-                        if (!meta) return null;
-                  
-                        const isRunning =
-                          state === "input-streaming" ||
-                          state === "call" ||
-                          state === "partial-call";
-                  
-                        const isDone =
-                          state === "output-available" ||
-                          state === "result";
-                  
-                        const isError = state === "error";
-                  
-                        const ToolIcon = meta.icon;
-                  
-                        return (
-                          <div
-                            key={partIndex}
-                            className={cn(
-                              "flex items-center gap-2 my-2 px-3 py-2 rounded-lg text-xs font-medium",
-                              isRunning &&
-                                "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
-                              isDone &&
-                                "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
-                              isError &&
-                                "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
-                            )}
-                          >
-                            {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                            {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
-                            {isError && <XCircle className="h-3.5 w-3.5" />}
-                            <ToolIcon className="h-3.5 w-3.5" />
-                            <span>
-                              {isRunning && meta.label + "..."}
-                              {isDone && meta.label + " - selesai"}
-                              {isError && meta.label + " - gagal"}
-                            </span>
-                          </div>
-                        );
-                      }
-                  
-                      return null;
-                    })}
-                  </div>
-                  {/* Timestamp */}
-                  {message.createdAt && (
+             {/* Render parts */}
+            <div className="prose prose-sm max-w-none">
+              {message.parts.map((part, partIndex) => {
+                // TEXT
+                if (part.type === "text") {
+                  return (
+                    <div key={partIndex}>
+                      {renderMarkdown(part.text)}
+                    </div>
+                  );
+                }
+            function isToolPart(
+                part: any
+              ): part is { type: string; state: string } {
+                return (
+                  typeof part?.type === "string" &&
+                  part.type.startsWith("tool-") &&
+                  "state" in part
+                );
+              }
+
+                // TOOL (AI SDK v6)
+                if (isToolPart(part)) {
+                  const toolName = part.type.replace("tool-", "");
+                  const meta = toolMeta[toolName];
+                  const state = part.state;
+            
+                  if (!meta) return null;
+            
+                  const isRunning =
+                    state === "input-streaming" ||
+                    state === "call" ||
+                    state === "partial-call";
+            
+                  const isDone =
+                    state === "output-available" ||
+                    state === "result";
+            
+                  const isError = state === "error";
+            
+                  const ToolIcon = meta.icon;
+            
+                  return (
                     <div
+                      key={partIndex}
                       className={cn(
-                        "mt-2 text-[11px] opacity-50",
-                        message.role === "user" ? "text-right" : "text-left"
+                        "flex items-center gap-2 my-2 px-3 py-2 rounded-lg text-xs font-medium",
+                        isRunning &&
+                          "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+                        isDone &&
+                          "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
+                        isError &&
+                          "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
                       )}
                     >
-                      {formatTime(message.createdAt)}
+                      {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {isError && <XCircle className="h-3.5 w-3.5" />}
+                      <ToolIcon className="h-3.5 w-3.5" />
+                      <span>
+                        {isRunning && meta.label + "..."}
+                        {isDone && meta.label + " - selesai"}
+                        {isError && meta.label + " - gagal"}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </div>
+                  );
+                }
+            
+                return null;
+              })}
             </div>
-          ))}
+            
 
           {/* Loading Indicator */}
           {isLoading && messages.length > 0 && (() => {
